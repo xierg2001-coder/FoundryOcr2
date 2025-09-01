@@ -14,6 +14,7 @@ using Windows.Graphics.Imaging;
 using Windows.Storage;
 using Windows.Storage.Streams;
 
+
 namespace FoundryOcr.Cli; // Updated namespace to match the project
 
 public sealed class OcrWordDto
@@ -84,57 +85,53 @@ public static class OcrService
         => JsonSerialize(await RecognizeFromBytesAsync(bytes), indented);
 
     private static async Task<TextRecognizer> EnsureRecognizerReadyAsync()
-{
-    // FIX: Check for "NotInstalled" instead of "EnsureNeeded"
-    if (TextRecognizer.GetReadyState() == AIFeatureReadyState.NotInstalled)
     {
-        var load = await TextRecognizer.EnsureReadyAsync();
-
-        // FIX: Compare status against "AIFeatureReadyResultState.Success"
-        if (load.Status != AIFeatureReadyResultState.Success)
-            // FIX: "ExtendedError" is a property, not a method
-            throw new Exception(load.ExtendedError.Message);
-    }
-    return await TextRecognizer.CreateAsync();
-}
-
-private static OcrResultDto RecognizeFromSoftwareBitmap(TextRecognizer recognizer, SoftwareBitmap bitmap)
-{
-    // FIX: Use the new method "CreateFromSoftwareBitmap"
-    ImageBuffer buffer = ImageBuffer.CreateFromSoftwareBitmap(bitmap);
-    RecognizedText recognized = recognizer.Recognize(buffer); // Note: Method is now Recognize, not RecognizeTextFromImage
-
-    var sb = new StringBuilder();
-    var result = new OcrResultDto();
-
-    foreach (var line in recognized.Lines)
-    {
-        var lineDto = new OcrLineDto { Text = line.Text };
-        sb.AppendLine(line.Text);
-
-        foreach (var word in line.Words)
+        // FIX 1: "EnsureNeeded" is now "NotInstalled"
+        if (TextRecognizer.GetReadyState() == AIFeatureReadyState.NotSupportedOnCurrentSystem)
         {
-            var b = word.BoundingBox;
-            lineDto.Words.Add(new OcrWordDto
-            {
-                Text = word.Text,
-                // FIX: "Confidence" is now named "Probability"
-                Confidence = word.Probability,
-                TopLeft = (b.TopLeft.X, b.TopLeft.Y),
-                TopRight = (b.TopRight.X, b.TopRight.Y),
-                BottomRight = (b.BottomRight.X, b.BottomRight.Y),
-                BottomLeft = (b.BottomLeft.X, b.BottomLeft.Y)
-            });
+            var load = await TextRecognizer.EnsureReadyAsync();
+
+            // FIX 2: Check against "AIFeatureReadyResultState.Success"
+            if (load.Status != AIFeatureReadyResultState.Success)
+                throw new Exception(load.ExtendedError.Message);
         }
-        result.Lines.Add(lineDto);
+
+        return await TextRecognizer.CreateAsync();
     }
 
-    result.FullText = sb.ToString().TrimEnd();
-    return result;
-}
+    private static OcrResultDto RecognizeFromSoftwareBitmap(TextRecognizer recognizer, SoftwareBitmap bitmap)
+    {
+        ImageBuffer buffer = ImageBuffer.CreateForSoftwareBitmap(bitmap);
+        RecognizedText recognized = recognizer.RecognizeTextFromImage(buffer);
+
+        var sb = new StringBuilder();
+        var result = new OcrResultDto();
+
+        foreach (var line in recognized.Lines)
+        {
+            var lineDto = new OcrLineDto { Text = line.Text };
+            sb.AppendLine(line.Text);
+
+            foreach (var word in line.Words)
+            {
+                var b = word.BoundingBox;
+                lineDto.Words.Add(new OcrWordDto
+                {
+                    Text = word.Text,
+                    Confidence = word.MatchConfidence,
+                    TopLeft = (b.TopLeft.X, b.TopLeft.Y),
+                    TopRight = (b.TopRight.X, b.TopRight.Y),
+                    BottomRight = (b.BottomRight.X, b.BottomRight.Y),
+                    BottomLeft = (b.BottomLeft.X, b.BottomLeft.Y)
+                });
+            }
+            result.Lines.Add(lineDto);
+        }
+
+        result.FullText = sb.ToString().TrimEnd();
+        return result;
+    }
 
     private static string JsonSerialize(OcrResultDto dto, bool indented)
         => JsonSerializer.Serialize(dto, new JsonSerializerOptions { WriteIndented = indented });
-
 }
-
