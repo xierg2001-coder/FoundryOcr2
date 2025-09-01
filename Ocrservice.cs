@@ -1,16 +1,18 @@
+using Microsoft.Graphics.Imaging;
+using Microsoft.Windows.AI;
+using Microsoft.Windows.AI.Imaging;
+using Microsoft.Windows.ApplicationModel.DynamicDependency;
+using Microsoft.Windows.Management.Deployment;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.Windows.Vision;
-using Microsoft.Windows.AI;
-using Microsoft.Graphics.Imaging;
 using Windows.Graphics.Imaging;
 using Windows.Storage;
 using Windows.Storage.Streams;
-using System.Runtime.InteropServices.WindowsRuntime;
 
 namespace FoundryOcr.Cli; // Updated namespace to match the project
 
@@ -127,4 +129,5 @@ public static class OcrService
 
     private static string JsonSerialize(OcrResultDto dto, bool indented)
         => JsonSerializer.Serialize(dto, new JsonSerializerOptions { WriteIndented = indented });
+
 }
