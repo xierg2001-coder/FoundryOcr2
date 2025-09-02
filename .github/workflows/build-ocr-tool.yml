@@ -9,20 +9,21 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # No change to setup steps
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '6.0.x' # Make sure this matches your project's .NET version
+        dotnet-version: '6.0.x' # Or your target .NET version
+
+    # Add this step to install the required VS Build Tools
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
 
     - name: Restore NuGet packages
       run: dotnet restore .\FoundryOcr.Cli.csproj
 
-    # This is the corrected step
     - name: Publish the application
       run: dotnet publish .\FoundryOcr.Cli.csproj -c Release -r win-x64 --self-contained true
 
-    # This step will now find the files
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
