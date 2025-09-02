@@ -3,36 +3,28 @@ on: [push]
 
 jobs:
   build:
-    # Use the standard Windows runner
     runs-on: windows-latest
 
     steps:
-    # 1. Checkout your code
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # 2. Set up the complete Visual Studio build environment. This is the key fix.
-    #    It provides the missing build tasks like the one in the error.
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
-
-    # 3. Set up a stable .NET 8 SDK, not a preview of .NET 9
+    # No change to setup steps
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '6.0.x'
+        dotnet-version: '6.0.x' # Make sure this matches your project's .NET version
 
-    # 4. Restore NuGet packages using MSBuild
     - name: Restore NuGet packages
-      run: msbuild FoundryOcr.Cli.csproj -t:Restore -p:Configuration=Release
+      run: dotnet restore .\FoundryOcr.Cli.csproj
 
-    # 5. Build and Publish the application using MSBuild
-    - name: Build and Publish Application
-      run: msbuild FoundryOcr.Cli.csproj -t:Publish -p:Configuration=Release -p:Platform=x64 -p:WindowsAppSDKSelfContained=true
+    # This is the corrected step
+    - name: Publish the application
+      run: dotnet publish .\FoundryOcr.Cli.csproj -c Release -r win-x64 --self-contained true
 
-    # 6. Upload the artifact from the correct publish location
+    # This step will now find the files
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
         name: ocr-tool
-        path: bin/x64/Release/net6.0-windows10.0.22621.0/win-x64/publish/
+        path: bin\x64\Release\net6.0-windows10.0.22621.0\win-x64\publish\
